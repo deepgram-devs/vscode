@@ -19,6 +19,7 @@ interface TranscriptionOptions {
     utterances?: boolean;
     diarize?: boolean;
     sample_rate?: number;
+    keyterms?: string[];
 }
 
 export class DeepgramService {
@@ -193,6 +194,13 @@ export class DeepgramService {
         if (options.smart_format) { params.append('smart_format', 'true'); }
         if (options.utterances) { params.append('utterances', 'true'); }
         if (options.diarize) { params.append('diarize', 'true'); }
+
+        // Add keyterms as separate parameters
+        if (options.keyterms && options.keyterms.length > 0) {
+            options.keyterms.forEach(keyterm => {
+                params.append('keyterm', keyterm);
+            });
+        }
 
         try {
             // Check if we have audio data

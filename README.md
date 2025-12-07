@@ -30,7 +30,6 @@ A Visual Studio Code extension that integrates Deepgram's Speech-to-Text (STT) a
 
 - Direct API key input
 - Optional short-lived token generation for enhanced security
-- Automatic token management
 
 ## Prerequisites
 

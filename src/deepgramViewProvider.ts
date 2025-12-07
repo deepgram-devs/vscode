@@ -43,6 +43,9 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 case 'synthesizeSpeech':
                     await this.handleTTS(data);
                     break;
+                case 'insertToEditor':
+                    await this.handleInsertToEditor(data);
+                    break;
             }
         });
     }
@@ -84,7 +87,8 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     smart_format: data.smartFormat,
                     utterances: data.utterances,
                     diarize: data.diarize,
-                    sample_rate: data.sampleRate
+                    sample_rate: data.sampleRate,
+                    keyterms: data.keyterms
                 }
             );
 
@@ -119,6 +123,25 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 type: 'ttsError',
                 error: error.message
             });
+        }
+    }
+
+    private async handleInsertToEditor(data: any) {
+        try {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showWarningMessage('No active text editor found. Please open a file first.');
+                return;
+            }
+
+            const position = editor.selection.active;
+            await editor.edit(editBuilder => {
+                editBuilder.insert(position, data.text);
+            });
+
+            vscode.window.showInformationMessage('Transcription inserted into editor!');
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to insert text: ${error.message}`);
         }
     }
 
@@ -221,9 +244,33 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     margin-top: 10px;
                     display: block;
                 }
+                .context-menu {
+                    position: absolute;
+                    background: var(--vscode-menu-background);
+                    border: 1px solid var(--vscode-menu-border);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    padding: 4px 0;
+                    z-index: 1000;
+                    min-width: 180px;
+                    display: none;
+                }
+                .context-menu-item {
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    color: var(--vscode-menu-foreground);
+                }
+                .context-menu-item:hover {
+                    background: var(--vscode-menu-selectionBackground);
+                    color: var(--vscode-menu-selectionForeground);
+                }
             </style>
         </head>
         <body>
+            <!-- Context Menu -->
+            <div id="contextMenu" class="context-menu">
+                <div class="context-menu-item" id="insertToEditor">Insert into Editor</div>
+            </div>
+
             <div style="margin-bottom: 20px;">
                 <label class="label">Deepgram API Key:</label>
                 <input type="password" id="apiKey" placeholder="Enter your Deepgram API key">
@@ -266,6 +313,9 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                         <label><input type="checkbox" id="utterances"> Utterances</label>
                         <label><input type="checkbox" id="diarize"> Diarization</label>
                     </div>
+
+                    <label class="label">keyterms (optional):</label>
+                    <input type="text" id="keyterms" placeholder="keyterm01, keyterm02, etc.">
 
                     <button id="transcribeBtn" disabled>Transcribe Selected Audio</button>
 
@@ -409,6 +459,11 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 // Transcription
                 document.getElementById('transcribeBtn').addEventListener('click', () => {
                     if (selectedAudioId) {
+                        const keytermsText = document.getElementById('keyterms').value;
+                        const keyterms = keytermsText
+                            ? keytermsText.split(',').map(k => k.trim()).filter(k => k.length > 0)
+                            : [];
+
                         vscode.postMessage({
                             type: 'transcribeAudio',
                             audioId: selectedAudioId,
@@ -419,7 +474,8 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                             smartFormat: document.getElementById('smartFormat').checked,
                             utterances: document.getElementById('utterances').checked,
                             diarize: document.getElementById('diarize').checked,
-                            sampleRate: parseInt(document.getElementById('sampleRate').value)
+                            sampleRate: parseInt(document.getElementById('sampleRate').value),
+                            keyterms: keyterms
                         });
                     }
                 });
@@ -497,6 +553,46 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     document.getElementById('ttsResult').style.display = 'block';
                     audio.play();
                 }
+
+                // Context menu for transcription result
+                const transcriptionResult = document.getElementById('transcriptionResult');
+                const contextMenu = document.getElementById('contextMenu');
+                const insertToEditorBtn = document.getElementById('insertToEditor');
+
+                // Show context menu on right-click
+                transcriptionResult.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    const text = transcriptionResult.textContent;
+
+                    // Only show menu if there's text
+                    if (text && text.trim().length > 0 && !text.startsWith('Error:')) {
+                        contextMenu.style.display = 'block';
+                        contextMenu.style.left = e.pageX + 'px';
+                        contextMenu.style.top = e.pageY + 'px';
+                    }
+                });
+
+                // Handle insert to editor action
+                insertToEditorBtn.addEventListener('click', () => {
+                    const text = transcriptionResult.textContent;
+                    if (text && text.trim().length > 0) {
+                        vscode.postMessage({
+                            type: 'insertToEditor',
+                            text: text
+                        });
+                    }
+                    contextMenu.style.display = 'none';
+                });
+
+                // Hide context menu when clicking elsewhere
+                document.addEventListener('click', () => {
+                    contextMenu.style.display = 'none';
+                });
+
+                // Prevent context menu from closing when clicking inside it
+                contextMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
             </script>
         </body>
         </html>`;
