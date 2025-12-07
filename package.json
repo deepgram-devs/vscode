@@ -1,0 +1,56 @@
+{
+  "publisher": "Deepgram",
+  "name": "deepgram-voice-ai",
+  "displayName": "Deepgram Voice AI",
+  "description": "VSCode extension for Deepgram Speech-to-Text and Text-to-Speech",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "deepgram-voice-ai",
+          "title": "Deepgram Voice AI",
+          "icon": "resources/deepgram-logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "deepgram-voice-ai": [
+        {
+          "icon": "resources/deepgram-logo.svg",
+          "id": "deepgramPanel",
+          "name": "Deepgram Voice AI",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^3.0.0",
+    "node-record-lpcm16": "^1.0.1",
+    "wav": "^1.0.2"
+  }
+}
