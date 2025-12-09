@@ -46,6 +46,12 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 case 'insertToEditor':
                     await this.handleInsertToEditor(data);
                     break;
+                case 'deleteAudio':
+                    this.deepgramService.deleteRecording(data.audioId);
+                    break;
+                case 'playAudio':
+                    await this.handlePlayAudio(data);
+                    break;
             }
         });
     }
@@ -79,7 +85,8 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
             const result = await this.deepgramService.transcribeAudio(
                 data.audioId,
                 {
-                    model: 'nova-3',
+                    model: data.model || 'nova-3',
+                    language: data.language,
                     multichannel: data.multichannel,
                     punctuate: data.punctuate,
                     dictation: data.dictation,
@@ -142,6 +149,23 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
             vscode.window.showInformationMessage('Transcription inserted into editor!');
         } catch (error: any) {
             vscode.window.showErrorMessage(`Failed to insert text: ${error.message}`);
+        }
+    }
+
+    private async handlePlayAudio(data: any) {
+        try {
+            const audioBuffer = this.deepgramService.getRecordingData(data.audioId);
+
+            this._view?.webview.postMessage({
+                type: 'playAudioResult',
+                audioData: Array.from(audioBuffer)
+            });
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Play audio error: ${error.message}`);
+            this._view?.webview.postMessage({
+                type: 'playAudioError',
+                error: error.message
+            });
         }
     }
 
@@ -217,6 +241,9 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     border: 1px solid var(--vscode-input-border);
                     cursor: pointer;
                     border-radius: 3px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                 }
                 .audio-item:hover {
                     background: var(--vscode-list-hoverBackground);
@@ -224,6 +251,32 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 .audio-item.selected {
                     background: var(--vscode-list-activeSelectionBackground);
                     color: var(--vscode-list-activeSelectionForeground);
+                }
+                .audio-item-text {
+                    flex: 1;
+                }
+                .audio-item-actions {
+                    display: flex;
+                    gap: 4px;
+                }
+                .audio-item-play {
+                    padding: 4px 8px;
+                    cursor: pointer;
+                    opacity: 0.7;
+                    font-size: 16px;
+                }
+                .audio-item-play:hover {
+                    opacity: 1;
+                }
+                .audio-item-delete {
+                    padding: 4px 8px;
+                    cursor: pointer;
+                    opacity: 0.7;
+                    font-size: 16px;
+                }
+                .audio-item-delete:hover {
+                    opacity: 1;
+                    color: var(--vscode-errorForeground);
                 }
                 .recording-indicator {
                     color: #f00;
@@ -302,6 +355,54 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                         <option value="32000">32000 Hz</option>
                         <option value="44100">44100 Hz</option>
                         <option value="48000">48000 Hz</option>
+                    </select>
+
+                    <label class="label">Model:</label>
+                    <select id="sttModel">
+                        <optgroup label="Current Generation">
+                            <option value="flux">Flux (English only)</option>
+                            <option value="nova-3" selected>Nova-3 (Multilingual)</option>
+                            <option value="nova-3-medical">Nova-3 Medical (English variants)</option>
+                            <option value="nova-2">Nova-2 (Multilingual)</option>
+                            <option value="nova-2-meeting">Nova-2 Meeting (English only)</option>
+                            <option value="nova-2-phonecall">Nova-2 Phonecall (English only)</option>
+                            <option value="nova-2-finance">Nova-2 Finance (English only)</option>
+                            <option value="nova-2-conversationalai">Nova-2 Conversational AI (English only)</option>
+                            <option value="nova-2-voicemail">Nova-2 Voicemail (English only)</option>
+                            <option value="nova-2-video">Nova-2 Video (English only)</option>
+                            <option value="nova-2-medical">Nova-2 Medical (English only)</option>
+                            <option value="nova-2-drivethru">Nova-2 Drive-thru (English only)</option>
+                            <option value="nova-2-automotive">Nova-2 Automotive (English only)</option>
+                            <option value="nova-2-atc">Nova-2 Air Traffic Control (English only)</option>
+                        </optgroup>
+                        <optgroup label="Legacy Models">
+                            <option value="nova">Nova (Legacy)</option>
+                            <option value="nova-phonecall">Nova Phonecall (Legacy)</option>
+                            <option value="nova-medical">Nova Medical (Legacy)</option>
+                            <option value="enhanced">Enhanced</option>
+                            <option value="enhanced-meeting">Enhanced Meeting</option>
+                            <option value="enhanced-phonecall">Enhanced Phonecall</option>
+                            <option value="enhanced-finance">Enhanced Finance</option>
+                            <option value="base">Base</option>
+                            <option value="base-meeting">Base Meeting</option>
+                            <option value="base-phonecall">Base Phonecall</option>
+                            <option value="base-finance">Base Finance</option>
+                            <option value="base-conversationalai">Base Conversational AI</option>
+                            <option value="base-voicemail">Base Voicemail</option>
+                            <option value="base-video">Base Video</option>
+                        </optgroup>
+                        <optgroup label="Whisper Models">
+                            <option value="whisper-tiny">Whisper Tiny</option>
+                            <option value="whisper-base">Whisper Base</option>
+                            <option value="whisper-small">Whisper Small</option>
+                            <option value="whisper-medium">Whisper Medium</option>
+                            <option value="whisper-large">Whisper Large</option>
+                        </optgroup>
+                    </select>
+
+                    <label class="label">Language:</label>
+                    <select id="sttLanguage">
+                        <option value="">Auto-detect</option>
                     </select>
 
                     <div class="checkbox-group">
@@ -424,6 +525,228 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 let selectedAudioId = null;
                 let isRecording = false;
 
+                // Model-Language mapping
+                const modelLanguages = {
+                    'flux': [
+                        { code: 'en', name: 'English' }
+                    ],
+                    'nova-3': [
+                        { code: '', name: 'Auto-detect (Multilingual)' },
+                        { code: 'multi', name: 'Multilingual' },
+                        { code: 'bg', name: 'Bulgarian' },
+                        { code: 'ca', name: 'Catalan' },
+                        { code: 'cs', name: 'Czech' },
+                        { code: 'da', name: 'Danish' },
+                        { code: 'da-DK', name: 'Danish (Denmark)' },
+                        { code: 'nl', name: 'Dutch' },
+                        { code: 'nl-BE', name: 'Flemish (Belgium)' },
+                        { code: 'en', name: 'English' },
+                        { code: 'en-US', name: 'English (US)' },
+                        { code: 'en-AU', name: 'English (Australia)' },
+                        { code: 'en-GB', name: 'English (UK)' },
+                        { code: 'en-IN', name: 'English (India)' },
+                        { code: 'en-NZ', name: 'English (New Zealand)' },
+                        { code: 'et', name: 'Estonian' },
+                        { code: 'fi', name: 'Finnish' },
+                        { code: 'fr', name: 'French' },
+                        { code: 'fr-CA', name: 'French (Canada)' },
+                        { code: 'de', name: 'German' },
+                        { code: 'de-CH', name: 'German (Switzerland)' },
+                        { code: 'el', name: 'Greek' },
+                        { code: 'hi', name: 'Hindi' },
+                        { code: 'hu', name: 'Hungarian' },
+                        { code: 'id', name: 'Indonesian' },
+                        { code: 'it', name: 'Italian' },
+                        { code: 'ja', name: 'Japanese' },
+                        { code: 'ko', name: 'Korean' },
+                        { code: 'ko-KR', name: 'Korean (South Korea)' },
+                        { code: 'lv', name: 'Latvian' },
+                        { code: 'lt', name: 'Lithuanian' },
+                        { code: 'ms', name: 'Malay' },
+                        { code: 'no', name: 'Norwegian' },
+                        { code: 'pl', name: 'Polish' },
+                        { code: 'pt', name: 'Portuguese' },
+                        { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+                        { code: 'pt-PT', name: 'Portuguese (Portugal)' },
+                        { code: 'ro', name: 'Romanian' },
+                        { code: 'ru', name: 'Russian' },
+                        { code: 'sk', name: 'Slovak' },
+                        { code: 'es', name: 'Spanish' },
+                        { code: 'es-419', name: 'Spanish (Latin America)' },
+                        { code: 'sv', name: 'Swedish' },
+                        { code: 'sv-SE', name: 'Swedish (Sweden)' },
+                        { code: 'tr', name: 'Turkish' },
+                        { code: 'uk', name: 'Ukrainian' },
+                        { code: 'vi', name: 'Vietnamese' }
+                    ],
+                    'nova-3-medical': [
+                        { code: 'en', name: 'English' },
+                        { code: 'en-US', name: 'English (US)' },
+                        { code: 'en-AU', name: 'English (Australia)' },
+                        { code: 'en-CA', name: 'English (Canada)' },
+                        { code: 'en-GB', name: 'English (UK)' },
+                        { code: 'en-IE', name: 'English (Ireland)' },
+                        { code: 'en-IN', name: 'English (India)' },
+                        { code: 'en-NZ', name: 'English (New Zealand)' }
+                    ],
+                    'nova-2': [
+                        { code: '', name: 'Auto-detect (Multilingual)' },
+                        { code: 'multi', name: 'Multilingual' },
+                        { code: 'bg', name: 'Bulgarian' },
+                        { code: 'ca', name: 'Catalan' },
+                        { code: 'cs', name: 'Czech' },
+                        { code: 'da', name: 'Danish' },
+                        { code: 'nl', name: 'Dutch' },
+                        { code: 'en', name: 'English' },
+                        { code: 'en-US', name: 'English (US)' },
+                        { code: 'en-AU', name: 'English (Australia)' },
+                        { code: 'en-GB', name: 'English (UK)' },
+                        { code: 'en-IN', name: 'English (India)' },
+                        { code: 'en-NZ', name: 'English (New Zealand)' },
+                        { code: 'et', name: 'Estonian' },
+                        { code: 'fi', name: 'Finnish' },
+                        { code: 'fr', name: 'French' },
+                        { code: 'fr-CA', name: 'French (Canada)' },
+                        { code: 'de', name: 'German' },
+                        { code: 'el', name: 'Greek' },
+                        { code: 'hi', name: 'Hindi' },
+                        { code: 'hu', name: 'Hungarian' },
+                        { code: 'id', name: 'Indonesian' },
+                        { code: 'it', name: 'Italian' },
+                        { code: 'ja', name: 'Japanese' },
+                        { code: 'ko', name: 'Korean' },
+                        { code: 'lv', name: 'Latvian' },
+                        { code: 'lt', name: 'Lithuanian' },
+                        { code: 'ms', name: 'Malay' },
+                        { code: 'no', name: 'Norwegian' },
+                        { code: 'pl', name: 'Polish' },
+                        { code: 'pt', name: 'Portuguese' },
+                        { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+                        { code: 'ro', name: 'Romanian' },
+                        { code: 'ru', name: 'Russian' },
+                        { code: 'sk', name: 'Slovak' },
+                        { code: 'es', name: 'Spanish' },
+                        { code: 'sv', name: 'Swedish' },
+                        { code: 'tr', name: 'Turkish' },
+                        { code: 'uk', name: 'Ukrainian' },
+                        { code: 'vi', name: 'Vietnamese' },
+                        { code: 'zh', name: 'Chinese' },
+                        { code: 'zh-CN', name: 'Chinese (Simplified)' },
+                        { code: 'zh-TW', name: 'Chinese (Traditional)' },
+                        { code: 'zh-HK', name: 'Chinese (Hong Kong)' },
+                        { code: 'th', name: 'Thai' },
+                        { code: 'th-TH', name: 'Thai (Thailand)' }
+                    ],
+                    'nova': [
+                        { code: 'en', name: 'English' },
+                        { code: 'es', name: 'Spanish' },
+                        { code: 'hi-Latn', name: 'Hindi (Latin script)' }
+                    ],
+                    'enhanced': [
+                        { code: '', name: 'Auto-detect' },
+                        { code: 'en', name: 'English' },
+                        { code: 'en-US', name: 'English (US)' },
+                        { code: 'en-AU', name: 'English (Australia)' },
+                        { code: 'en-GB', name: 'English (UK)' },
+                        { code: 'en-IN', name: 'English (India)' },
+                        { code: 'en-NZ', name: 'English (New Zealand)' },
+                        { code: 'es', name: 'Spanish' },
+                        { code: 'fr', name: 'French' },
+                        { code: 'de', name: 'German' },
+                        { code: 'pt', name: 'Portuguese' },
+                        { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+                        { code: 'nl', name: 'Dutch' },
+                        { code: 'ko', name: 'Korean' },
+                        { code: 'hi', name: 'Hindi' }
+                    ],
+                    'base': [
+                        { code: '', name: 'Auto-detect' },
+                        { code: 'en', name: 'English' },
+                        { code: 'en-US', name: 'English (US)' },
+                        { code: 'en-AU', name: 'English (Australia)' },
+                        { code: 'en-GB', name: 'English (UK)' },
+                        { code: 'en-IN', name: 'English (India)' },
+                        { code: 'en-NZ', name: 'English (New Zealand)' },
+                        { code: 'es', name: 'Spanish' },
+                        { code: 'fr', name: 'French' },
+                        { code: 'de', name: 'German' },
+                        { code: 'pt', name: 'Portuguese' },
+                        { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+                        { code: 'nl', name: 'Dutch' },
+                        { code: 'ko', name: 'Korean' },
+                        { code: 'hi', name: 'Hindi' },
+                        { code: 'ja', name: 'Japanese' },
+                        { code: 'zh', name: 'Chinese' },
+                        { code: 'ru', name: 'Russian' },
+                        { code: 'it', name: 'Italian' }
+                    ],
+                    'whisper-tiny': [
+                        { code: '', name: 'Auto-detect (100+ languages)' },
+                        { code: 'en', name: 'English' },
+                        { code: 'es', name: 'Spanish' },
+                        { code: 'fr', name: 'French' },
+                        { code: 'de', name: 'German' },
+                        { code: 'it', name: 'Italian' },
+                        { code: 'pt', name: 'Portuguese' },
+                        { code: 'nl', name: 'Dutch' },
+                        { code: 'ru', name: 'Russian' },
+                        { code: 'zh', name: 'Chinese' },
+                        { code: 'ja', name: 'Japanese' },
+                        { code: 'ko', name: 'Korean' },
+                        { code: 'ar', name: 'Arabic' },
+                        { code: 'hi', name: 'Hindi' }
+                    ]
+                };
+
+                // English-only models
+                const englishOnlyModels = [
+                    'nova-2-meeting', 'nova-2-phonecall', 'nova-2-finance', 'nova-2-conversationalai',
+                    'nova-2-voicemail', 'nova-2-video', 'nova-2-medical', 'nova-2-drivethru',
+                    'nova-2-automotive', 'nova-2-atc', 'nova-phonecall', 'nova-medical',
+                    'enhanced-meeting', 'enhanced-phonecall', 'enhanced-finance',
+                    'base-meeting', 'base-phonecall', 'base-finance', 'base-conversationalai',
+                    'base-voicemail', 'base-video'
+                ];
+
+                // Initialize language dropdown on page load
+                function updateLanguageOptions(model) {
+                    const languageSelect = document.getElementById('sttLanguage');
+                    languageSelect.innerHTML = '';
+
+                    let languages;
+                    if (englishOnlyModels.includes(model)) {
+                        languages = [{ code: 'en', name: 'English' }];
+                    } else if (modelLanguages[model]) {
+                        languages = modelLanguages[model];
+                    } else if (model.startsWith('whisper-')) {
+                        languages = modelLanguages['whisper-tiny'];
+                    } else {
+                        // Default fallback
+                        languages = [
+                            { code: '', name: 'Auto-detect' },
+                            { code: 'en', name: 'English' }
+                        ];
+                    }
+
+                    languages.forEach(lang => {
+                        const option = document.createElement('option');
+                        option.value = lang.code;
+                        option.textContent = lang.name;
+                        if (lang.code === 'en') {
+                            option.selected = true;
+                        }
+                        languageSelect.appendChild(option);
+                    });
+                }
+
+                // Initialize with default model (nova-3)
+                updateLanguageOptions('nova-3');
+
+                // Handle model selection change
+                document.getElementById('sttModel').addEventListener('change', (e) => {
+                    updateLanguageOptions(e.target.value);
+                });
+
                 // API Key handling
                 document.getElementById('apiKey').addEventListener('change', (e) => {
                     vscode.postMessage({
@@ -467,6 +790,8 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                         vscode.postMessage({
                             type: 'transcribeAudio',
                             audioId: selectedAudioId,
+                            model: document.getElementById('sttModel').value,
+                            language: document.getElementById('sttLanguage').value,
                             multichannel: document.getElementById('multichannel').checked,
                             punctuate: document.getElementById('punctuate').checked,
                             dictation: document.getElementById('dictation').checked,
@@ -522,6 +847,12 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                         case 'ttsError':
                             alert('TTS Error: ' + message.error);
                             break;
+                        case 'playAudioResult':
+                            playRecordedAudio(message.audioData);
+                            break;
+                        case 'playAudioError':
+                            alert('Play Error: ' + message.error);
+                            break;
                     }
                 });
 
@@ -530,9 +861,82 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     const audioList = document.getElementById('audioList');
                     const item = document.createElement('div');
                     item.className = 'audio-item';
-                    item.textContent = \`Audio \${audioClips.length} (\${duration.toFixed(1)}s)\`;
-                    item.onclick = () => selectAudioClip(id, item);
+                    item.dataset.audioId = id;
+
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'audio-item-text';
+                    textSpan.textContent = \`Audio \${audioClips.length} (\${duration.toFixed(1)}s)\`;
+                    textSpan.onclick = () => selectAudioClip(id, item);
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'audio-item-actions';
+
+                    const playBtn = document.createElement('span');
+                    playBtn.className = 'audio-item-play';
+                    playBtn.innerHTML = '▶️';
+                    playBtn.title = 'Play audio clip';
+                    playBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        playAudioClip(id);
+                    };
+
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.className = 'audio-item-delete';
+                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.title = 'Delete audio clip';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteAudioClip(id, item);
+                    };
+
+                    actionsDiv.appendChild(playBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    item.appendChild(textSpan);
+                    item.appendChild(actionsDiv);
                     audioList.appendChild(item);
+                }
+
+                function deleteAudioClip(id, element) {
+                    // Notify backend to delete recording
+                    vscode.postMessage({
+                        type: 'deleteAudio',
+                        audioId: id
+                    });
+
+                    // Remove from audioClips array
+                    const index = audioClips.findIndex(clip => clip.id === id);
+                    if (index !== -1) {
+                        audioClips.splice(index, 1);
+                    }
+
+                    // Remove from DOM
+                    element.remove();
+
+                    // If this was the selected clip, clear selection
+                    if (selectedAudioId === id) {
+                        selectedAudioId = null;
+                        document.getElementById('transcribeBtn').disabled = true;
+                    }
+
+                    // Renumber remaining clips
+                    const audioList = document.getElementById('audioList');
+                    const items = audioList.querySelectorAll('.audio-item');
+                    items.forEach((item, idx) => {
+                        const textSpan = item.querySelector('.audio-item-text');
+                        const clipId = item.dataset.audioId;
+                        const clip = audioClips.find(c => c.id === clipId);
+                        if (clip) {
+                            textSpan.textContent = \`Audio \${idx + 1} (\${clip.duration.toFixed(1)}s)\`;
+                        }
+                    });
+                }
+
+                function playAudioClip(id) {
+                    // Request audio data from backend
+                    vscode.postMessage({
+                        type: 'playAudio',
+                        audioId: id
+                    });
                 }
 
                 function selectAudioClip(id, element) {
@@ -551,6 +955,14 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     const audio = document.getElementById('ttsAudio');
                     audio.src = url;
                     document.getElementById('ttsResult').style.display = 'block';
+                    audio.play();
+                }
+
+                function playRecordedAudio(audioData) {
+                    const uint8Array = new Uint8Array(audioData);
+                    const blob = new Blob([uint8Array], { type: 'audio/wav' });
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
                     audio.play();
                 }
 

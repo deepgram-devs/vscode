@@ -11,6 +11,7 @@ interface AudioRecording {
 
 interface TranscriptionOptions {
     model: string;
+    language?: string;
     multichannel?: boolean;
     punctuate?: boolean;
     dictation?: boolean;
@@ -70,6 +71,18 @@ export class DeepgramService {
             vscode.window.showErrorMessage(`Auth error: ${error.message}`);
             throw error;
         }
+    }
+
+    deleteRecording(audioId: string): void {
+        this.recordings.delete(audioId);
+    }
+
+    getRecordingData(audioId: string): Buffer {
+        const recording = this.recordings.get(audioId);
+        if (!recording) {
+            throw new Error('Audio recording not found');
+        }
+        return recording.buffer;
     }
 
     async startRecording(sampleRate: number = 16000): Promise<void> {
@@ -184,7 +197,8 @@ export class DeepgramService {
         // Build query parameters
         const params = new URLSearchParams({
             model: options.model || 'nova-3',
-            ...(options.sample_rate && { sample_rate: options.sample_rate.toString() })
+            ...(options.sample_rate && { sample_rate: options.sample_rate.toString() }),
+            ...(options.language && { language: options.language })
         });
 
         if (options.multichannel) {params.append('multichannel', 'true');}
