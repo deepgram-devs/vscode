@@ -4,9 +4,17 @@ import { DeepgramService } from './deepgramService';
 export class DeepgramViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private deepgramService: DeepgramService;
+    private outputChannel: vscode.OutputChannel;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this.deepgramService = new DeepgramService();
+        this.outputChannel = vscode.window.createOutputChannel('Deepgram Voice AI');
+        this.log('Deepgram Voice AI extension initialized');
+    }
+
+    private log(message: string): void {
+        const timestamp = new Date().toISOString();
+        this.outputChannel.appendLine(`[${timestamp}] ${message}`);
     }
 
     public resolveWebviewView(
@@ -47,10 +55,17 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     await this.handleInsertToEditor(data);
                     break;
                 case 'deleteAudio':
+                    this.log(`User deleted audio clip: ${data.audioId}`);
                     this.deepgramService.deleteRecording(data.audioId);
                     break;
                 case 'playAudio':
                     await this.handlePlayAudio(data);
+                    break;
+                case 'modelChanged':
+                    this.log(`User changed model: ${data.model}`);
+                    break;
+                case 'languageChanged':
+                    this.log(`User changed language: ${data.language || 'auto-detect'}`);
                     break;
             }
         });
@@ -58,11 +73,13 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
 
     private async handleStartRecording() {
         try {
+            this.log('User started recording audio');
             const audioData = await this.deepgramService.startRecording();
             this._view?.webview.postMessage({
                 type: 'recordingStarted'
             });
         } catch (error: any) {
+            this.log(`Recording start failed: ${error.message}`);
             vscode.window.showErrorMessage(`Recording error: ${error.message}`);
         }
     }
@@ -70,41 +87,48 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
     private async handleStopRecording() {
         try {
             const audioData = await this.deepgramService.stopRecording();
+            this.log(`User stopped recording: ${audioData.id} (${audioData.duration.toFixed(2)}s, ${audioData.buffer.length} bytes)`);
             this._view?.webview.postMessage({
                 type: 'recordingStopped',
                 audioId: audioData.id,
                 duration: audioData.duration
             });
         } catch (error: any) {
+            this.log(`Recording stop failed: ${error.message}`);
             vscode.window.showErrorMessage(`Recording error: ${error.message}`);
         }
     }
 
     private async handleTranscribe(data: any) {
         try {
-            const result = await this.deepgramService.transcribeAudio(
-                data.audioId,
-                {
-                    model: data.model || 'nova-3',
-                    language: data.language,
-                    multichannel: data.multichannel,
-                    punctuate: data.punctuate,
-                    dictation: data.dictation,
-                    paragraphs: data.paragraphs,
-                    smart_format: data.smartFormat,
-                    utterances: data.utterances,
-                    diarize: data.diarize,
-                    sample_rate: data.sampleRate,
-                    keyterms: data.keyterms
-                }
-            );
+            const options = {
+                model: data.model || 'nova-3',
+                language: data.language,
+                multichannel: data.multichannel,
+                punctuate: data.punctuate,
+                dictation: data.dictation,
+                paragraphs: data.paragraphs,
+                smart_format: data.smartFormat,
+                utterances: data.utterances,
+                diarize: data.diarize,
+                sample_rate: data.sampleRate,
+                keyterms: data.keyterms
+            };
+
+            this.log(`User invoked transcription: audioId=${data.audioId}, model=${options.model}, language=${options.language || 'auto'}`);
+
+            const result = await this.deepgramService.transcribeAudio(data.audioId, options);
+
+            const transcript = result.results.channels[0].alternatives[0].transcript;
+            this.log(`Transcription completed: ${transcript.length} characters`);
 
             this._view?.webview.postMessage({
                 type: 'transcriptionResult',
-                transcript: result.results.channels[0].alternatives[0].transcript,
+                transcript: transcript,
                 fullResult: result
             });
         } catch (error: any) {
+            this.log(`Transcription failed: ${error.message}`);
             vscode.window.showErrorMessage(`Transcription error: ${error.message}`);
             this._view?.webview.postMessage({
                 type: 'transcriptionError',
@@ -115,16 +139,21 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
 
     private async handleTTS(data: any) {
         try {
+            this.log(`User invoked text-to-speech: voice=${data.voice}, textLength=${data.text.length}`);
+
             const audioBuffer = await this.deepgramService.synthesizeSpeech(
                 data.text,
                 data.voice
             );
+
+            this.log(`Text-to-speech completed: ${audioBuffer.length} bytes`);
 
             this._view?.webview.postMessage({
                 type: 'ttsResult',
                 audioData: Array.from(audioBuffer)
             });
         } catch (error: any) {
+            this.log(`Text-to-speech failed: ${error.message}`);
             vscode.window.showErrorMessage(`TTS error: ${error.message}`);
             this._view?.webview.postMessage({
                 type: 'ttsError',
@@ -154,6 +183,7 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
 
     private async handlePlayAudio(data: any) {
         try {
+            this.log(`User playing audio clip: ${data.audioId}`);
             const audioBuffer = this.deepgramService.getRecordingData(data.audioId);
 
             this._view?.webview.postMessage({
@@ -161,6 +191,7 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 audioData: Array.from(audioBuffer)
             });
         } catch (error: any) {
+            this.log(`Play audio failed: ${error.message}`);
             vscode.window.showErrorMessage(`Play audio error: ${error.message}`);
             this._view?.webview.postMessage({
                 type: 'playAudioError',
@@ -461,7 +492,7 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                             <option value="aura-2-athena-en">Athena</option>
                             <option value="aura-2-atlas-en">Atlas</option>
                             <option value="aura-2-aurora-en">Aurora</option>
-                            <option value="aura-2-callisto-en">Callisto</option>
+                            <option value="aura-2-callista-en">Callista</option>
                             <option value="aura-2-cora-en">Cora</option>
                             <option value="aura-2-cordelia-en">Cordelia</option>
                             <option value="aura-2-delia-en">Delia</option>
@@ -744,7 +775,20 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
 
                 // Handle model selection change
                 document.getElementById('sttModel').addEventListener('change', (e) => {
-                    updateLanguageOptions(e.target.value);
+                    const model = e.target.value;
+                    updateLanguageOptions(model);
+                    vscode.postMessage({
+                        type: 'modelChanged',
+                        model: model
+                    });
+                });
+
+                // Handle language selection change
+                document.getElementById('sttLanguage').addEventListener('change', (e) => {
+                    vscode.postMessage({
+                        type: 'languageChanged',
+                        language: e.target.value
+                    });
                 });
 
                 // API Key handling
