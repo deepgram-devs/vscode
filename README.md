@@ -134,9 +134,11 @@ Then install the generated `.vsix` file in VSCode:
 The extension includes both Aura-1 and Aura-2 voice models:
 
 ### Aura-1 English Voices
+
 Asteria, Luna, Stella, Athena, Hera, Orion, Arcas, Perseus, Angus, Orpheus, Helios, Zeus
 
 ### Aura-2 English Voices (Featured)
+
 - **Thalia** - Clear, Confident, Energetic, Enthusiastic
 - **Andromeda** - Casual, Expressive, Comfortable
 - **Helena** - Caring, Natural, Positive, Friendly
@@ -145,14 +147,17 @@ Asteria, Luna, Stella, Athena, Hera, Orion, Arcas, Perseus, Angus, Orpheus, Heli
 - **Aries** - Warm, Energetic, Caring
 
 ### Aura-2 English Voices (Additional)
+
 Amalthea, Asteria, Athena, Atlas, Aurora, Callisto, Cora, Cordelia, Delia, Draco, Electra, Harmonia, Hera, Hermes, Hyperion, Iris, Janus, Juno, Jupiter, Luna, Mars, Minerva, Neptune, Odysseus, Ophelia, Orion, Orpheus, Pandora, Phoebe, Pluto, Saturn, Selene, Theia, Vesta, Zeus
 
 ### Aura-2 Spanish Voices (Featured)
+
 - **Celeste** - Colombian accent, Clear, Energetic, Positive
 - **Estrella** - Mexican accent, Natural, Calm, Comfortable
 - **Nestor** - Peninsular accent, Professional, Calm, Confident
 
 ### Aura-2 Spanish Voices (Additional)
+
 Sirio, Carina, Alvaro, Diana, Aquila, Selena, Javier (representing Mexican, Peninsular, Colombian, and Latin American accents)
 
 ## Configuration
