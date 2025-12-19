@@ -243,6 +243,19 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     border: 1px solid var(--vscode-input-border);
                     box-sizing: border-box;
                 }
+                input.api-key-empty {
+                    border: 2px solid var(--vscode-errorForeground);
+                    box-shadow: 0 0 8px var(--vscode-errorForeground);
+                    animation: pulse-red 2s infinite;
+                }
+                @keyframes pulse-red {
+                    0%, 100% {
+                        box-shadow: 0 0 8px var(--vscode-errorForeground);
+                    }
+                    50% {
+                        box-shadow: 0 0 12px var(--vscode-errorForeground);
+                    }
+                }
                 button {
                     padding: 8px 12px;
                     margin: 5px 5px 5px 0;
@@ -537,6 +550,49 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                             <option value="aura-2-selena-es">Selena</option>
                             <option value="aura-2-javier-es">Javier</option>
                         </optgroup>
+                        <optgroup label="Aura-2 Dutch">
+                            <option value="aura-2-beatrix-nl">Beatrix</option>
+                            <option value="aura-2-cornelia-nl">Cornelia</option>
+                            <option value="aura-2-daphne-nl">Daphne</option>
+                            <option value="aura-2-hestia-nl">Hestia</option>
+                            <option value="aura-2-lars-nl">Lars</option>
+                            <option value="aura-2-leda-nl">Leda</option>
+                            <option value="aura-2-rhea-nl">Rhea</option>
+                            <option value="aura-2-roman-nl">Roman</option>
+                            <option value="aura-2-sander-nl">Sander</option>
+                        </optgroup>
+                        <optgroup label="Aura-2 French">
+                            <option value="aura-2-agathe-fr">Agathe</option>
+                            <option value="aura-2-hector-fr">Hector</option>
+                        </optgroup>
+                        <optgroup label="Aura-2 German">
+                            <option value="aura-2-aurelia-de">Aurelia</option>
+                            <option value="aura-2-elara-de">Elara</option>
+                            <option value="aura-2-fabian-de">Fabian</option>
+                            <option value="aura-2-julius-de">Julius</option>
+                            <option value="aura-2-kara-de">Kara</option>
+                            <option value="aura-2-lara-de">Lara</option>
+                            <option value="aura-2-viktoria-de">Viktoria</option>
+                        </optgroup>
+                        <optgroup label="Aura-2 Italian">
+                            <option value="aura-2-cesare-it">Cesare</option>
+                            <option value="aura-2-cinzia-it">Cinzia</option>
+                            <option value="aura-2-demetra-it">Demetra</option>
+                            <option value="aura-2-dionisio-it">Dionisio</option>
+                            <option value="aura-2-elio-it">Elio</option>
+                            <option value="aura-2-flavio-it">Flavio</option>
+                            <option value="aura-2-livia-it">Livia</option>
+                            <option value="aura-2-maia-it">Maia</option>
+                            <option value="aura-2-melia-it">Melia</option>
+                            <option value="aura-2-perseo-it">Perseo</option>
+                        </optgroup>
+                        <optgroup label="Aura-2 Japanese">
+                            <option value="aura-2-ama-ja">Ama</option>
+                            <option value="aura-2-ebisu-ja">Ebisu</option>
+                            <option value="aura-2-fujin-ja">Fujin</option>
+                            <option value="aura-2-izanami-ja">Izanami</option>
+                            <option value="aura-2-uzume-ja">Uzume</option>
+                        </optgroup>
                     </select>
 
                     <label class="label">Text to Speak:</label>
@@ -792,7 +848,24 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                 });
 
                 // API Key handling
+                function checkApiKey() {
+                    const apiKeyInput = document.getElementById('apiKey');
+                    if (apiKeyInput.value.trim() === '') {
+                        apiKeyInput.classList.add('api-key-empty');
+                    } else {
+                        apiKeyInput.classList.remove('api-key-empty');
+                    }
+                }
+
+                // Check on page load
+                checkApiKey();
+
+                document.getElementById('apiKey').addEventListener('input', (e) => {
+                    checkApiKey();
+                });
+
                 document.getElementById('apiKey').addEventListener('change', (e) => {
+                    checkApiKey();
                     vscode.postMessage({
                         type: 'setApiKey',
                         apiKey: e.target.value

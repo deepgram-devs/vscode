@@ -22,9 +22,9 @@ A Visual Studio Code extension that integrates Deepgram's Speech-to-Text (STT) a
 ### Text-to-Speech (TTS)
 
 - Convert text to speech using Deepgram's Aura 2 voices
-- 12 high-quality voice options
+- 80+ high-quality voice options across multiple languages
 - Real-time audio playback in the extension
-- Support for various English voice models
+- Support for English, Spanish, Dutch, French, German, Italian, and Japanese voices
 
 ### Authentication
 
@@ -159,6 +159,26 @@ Amalthea, Asteria, Athena, Atlas, Aurora, Callisto, Cora, Cordelia, Delia, Draco
 ### Aura-2 Spanish Voices (Additional)
 
 Sirio, Carina, Alvaro, Diana, Aquila, Selena, Javier (representing Mexican, Peninsular, Colombian, and Latin American accents)
+
+### Aura-2 Dutch Voices
+
+Beatrix, Cornelia, Daphne, Hestia, Lars, Leda, Rhea, Roman, Sander
+
+### Aura-2 French Voices
+
+Agathe, Hector
+
+### Aura-2 German Voices
+
+Aurelia, Elara, Fabian, Julius, Kara, Lara, Viktoria
+
+### Aura-2 Italian Voices
+
+Cesare, Cinzia, Demetra, Dionisio, Elio, Flavio, Livia, Maia, Melia, Perseo
+
+### Aura-2 Japanese Voices
+
+Ama, Ebisu, Fujin, Izanami, Uzume
 
 ## Configuration
 

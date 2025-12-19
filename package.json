@@ -3,7 +3,7 @@
   "name": "deepgram-voice-ai",
   "displayName": "Deepgram Voice AI",
   "description": "VSCode extension for Deepgram Speech-to-Text and Text-to-Speech",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.80.0"
   },
