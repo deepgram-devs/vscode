@@ -25,6 +25,7 @@ interface TranscriptionOptions {
 
 export class DeepgramService {
     private apiKey: string = '';
+    private apiBaseUrl: string = '';
     private useShortLivedToken: boolean = false;
     private recordings: Map<string, AudioRecording> = new Map();
     private currentRecording: {
@@ -39,6 +40,16 @@ export class DeepgramService {
         this.apiKey = apiKey;
     }
 
+    setApiBaseUrl(baseUrl: string) {
+        // Remove trailing slash if present
+        this.apiBaseUrl = baseUrl.trim().replace(/\/$/, '');
+    }
+
+    private getBaseUrl(): string {
+        // Use custom base URL if provided, otherwise default to Deepgram API
+        return this.apiBaseUrl || 'https://api.deepgram.com';
+    }
+
     setUseShortLivedToken(value: boolean) {
         this.useShortLivedToken = value;
     }
@@ -49,7 +60,7 @@ export class DeepgramService {
         }
 
         try {
-            const response = await fetch('https://api.deepgram.com/v1/auth/grant', {
+            const response = await fetch(`${this.getBaseUrl()}/v1/auth/grant`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Token ${this.apiKey}`,
@@ -227,7 +238,7 @@ export class DeepgramService {
             );
 
             const response = await fetch(
-                `https://api.deepgram.com/v1/listen?${params.toString()}`,
+                `${this.getBaseUrl()}/v1/listen?${params.toString()}`,
                 {
                     method: 'POST',
                     headers: {
@@ -269,7 +280,7 @@ export class DeepgramService {
             }
 
             const response = await fetch(
-                `https://api.deepgram.com/v1/speak?${params.toString()}`,
+                `${this.getBaseUrl()}/v1/speak?${params.toString()}`,
                 {
                     method: 'POST',
                     headers: {

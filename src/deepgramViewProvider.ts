@@ -33,6 +33,10 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
+                case 'setApiBaseUrl':
+                    this.deepgramService.setApiBaseUrl(data.baseUrl);
+                    this.log(`API base URL updated: ${data.baseUrl || 'default'}`);
+                    break;
                 case 'setApiKey':
                     this.deepgramService.setApiKey(data.apiKey);
                     break;
@@ -373,6 +377,9 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
             </div>
 
             <div style="margin-bottom: 20px;">
+                <label class="label">API Base URL (optional):</label>
+                <input type="text" id="apiBaseUrl" placeholder="https://api.deepgram.com (leave empty for default)">
+
                 <label class="label">Deepgram API Key:</label>
                 <input type="password" id="apiKey" placeholder="Enter your Deepgram API key">
 
@@ -864,6 +871,14 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     vscode.postMessage({
                         type: 'languageChanged',
                         language: e.target.value
+                    });
+                });
+
+                // API Base URL handling
+                document.getElementById('apiBaseUrl').addEventListener('change', (e) => {
+                    vscode.postMessage({
+                        type: 'setApiBaseUrl',
+                        baseUrl: e.target.value.trim()
                     });
                 });
 
