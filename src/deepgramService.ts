@@ -252,7 +252,7 @@ export class DeepgramService {
         }
     }
 
-    async synthesizeSpeech(text: string, voice: string): Promise<Buffer> {
+    async synthesizeSpeech(text: string, voice: string, speed?: number): Promise<Buffer> {
         if (!this.apiKey) {
             throw new Error('Please set your Deepgram API key first');
         }
@@ -260,8 +260,16 @@ export class DeepgramService {
         const token = await this.getAuthToken();
 
         try {
+            // Build query parameters
+            const params = new URLSearchParams({ model: voice });
+
+            // Add speed parameter if provided and valid
+            if (speed !== undefined && speed >= 0.7 && speed <= 1.5) {
+                params.append('speed', speed.toString());
+            }
+
             const response = await fetch(
-                `https://api.deepgram.com/v1/speak?model=${voice}`,
+                `https://api.deepgram.com/v1/speak?${params.toString()}`,
                 {
                     method: 'POST',
                     headers: {

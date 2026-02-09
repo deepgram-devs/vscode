@@ -25,6 +25,7 @@ A Visual Studio Code extension that integrates Deepgram's Speech-to-Text (STT) a
 - 80+ high-quality voice options across multiple languages
 - Real-time audio playback in the extension
 - Support for English, Spanish, Dutch, French, German, Italian, and Japanese voices
+- Adjustable speech speed (0.7x - 1.5x) with optional control toggle
 
 ### Authentication
 
@@ -125,9 +126,13 @@ Then install the generated `.vsix` file in VSCode:
 
 1. Expand the "Text-to-Speech (TTS)" section
 2. Select a voice from the dropdown
-3. Enter the text you want to convert to speech
-4. Click "Speak"
-5. Listen to the generated audio using the built-in player
+3. (Optional) Enable "Adjust Speed" to customize speech speed:
+   - Move the slider to select speed from 0.7x (slower) to 1.5x (faster)
+   - Default is 1.0x (normal speed)
+   - Leave unchecked to use Deepgram's default speed
+4. Enter the text you want to convert to speech
+5. Click "Speak"
+6. Listen to the generated audio using the built-in player
 
 ## Available Voices
 

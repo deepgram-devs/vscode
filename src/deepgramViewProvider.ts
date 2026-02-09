@@ -139,11 +139,15 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
 
     private async handleTTS(data: any) {
         try {
-            this.log(`User invoked text-to-speech: voice=${data.voice}, textLength=${data.text.length}`);
+            const logMessage = data.speed
+                ? `User invoked text-to-speech: voice=${data.voice}, speed=${data.speed}, textLength=${data.text.length}`
+                : `User invoked text-to-speech: voice=${data.voice}, textLength=${data.text.length}`;
+            this.log(logMessage);
 
             const audioBuffer = await this.deepgramService.synthesizeSpeech(
                 data.text,
-                data.voice
+                data.voice,
+                data.speed
             );
 
             this.log(`Text-to-speech completed: ${audioBuffer.length} bytes`);
@@ -595,6 +599,22 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                         </optgroup>
                     </select>
 
+                    <label style="display: block; margin-top: 10px;">
+                        <input type="checkbox" id="ttsSpeedEnabled">
+                        Adjust Speed
+                    </label>
+
+                    <div id="ttsSpeedControls" style="display: none; margin-top: 10px;">
+                        <label class="label">Speed: <span id="ttsSpeedValue">1.0</span>x</label>
+                        <input type="range" id="ttsSpeed" min="0.7" max="1.5" step="0.05" value="1.0"
+                               style="width: 100%; margin: 5px 0;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8em; opacity: 0.7; margin-bottom: 10px;">
+                            <span>0.7x (Slower)</span>
+                            <span>1.0x (Normal)</span>
+                            <span>1.5x (Faster)</span>
+                        </div>
+                    </div>
+
                     <label class="label">Text to Speak:</label>
                     <textarea id="ttsText" rows="4" placeholder="Enter text to convert to speech..."></textarea>
 
@@ -922,16 +942,38 @@ export class DeepgramViewProvider implements vscode.WebviewViewProvider {
                     }
                 });
 
+                // TTS Speed enabled checkbox
+                document.getElementById('ttsSpeedEnabled').addEventListener('change', (e) => {
+                    const speedControls = document.getElementById('ttsSpeedControls');
+                    speedControls.style.display = e.target.checked ? 'block' : 'none';
+                });
+
+                // TTS Speed slider
+                document.getElementById('ttsSpeed').addEventListener('input', (e) => {
+                    const speedValue = parseFloat(e.target.value);
+                    document.getElementById('ttsSpeedValue').textContent = speedValue.toFixed(2);
+                });
+
                 // TTS
                 document.getElementById('speakBtn').addEventListener('click', () => {
                     const text = document.getElementById('ttsText').value;
                     const voice = document.getElementById('ttsVoice').value;
+                    const speedEnabled = document.getElementById('ttsSpeedEnabled').checked;
+                    const speed = speedEnabled ? parseFloat(document.getElementById('ttsSpeed').value) : undefined;
+
                     if (text) {
-                        vscode.postMessage({
+                        const message = {
                             type: 'synthesizeSpeech',
                             text: text,
                             voice: voice
-                        });
+                        };
+
+                        // Only include speed if enabled
+                        if (speed !== undefined) {
+                            message.speed = speed;
+                        }
+
+                        vscode.postMessage(message);
                     }
                 });
 
